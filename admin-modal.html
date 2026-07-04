@@ -1,0 +1,54 @@
+<!-- Admin Panel Modal (Updated) -->
+<div id="adminModal" class="modal">
+    <div class="modal-content modal-large admin-modal">
+        <span class="close">&times;</span>
+        <div class="admin-header">
+            <h2 data-i18n="admin_panel">Админ-панель</h2>
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div>
+                        <span class="stat-label" data-i18n="total_users">Всего пользователей</span>
+                        <span class="stat-value" id="totalUsers">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-map-pin"></i>
+                    <div>
+                        <span class="stat-label" data-i18n="total_markers">Всего отметок</span>
+                        <span class="stat-value" id="totalMarkers">0</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div>
+                        <span class="stat-label" data-i18n="last_activity">Последняя активность</span>
+                        <span class="stat-value" id="lastActivity">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab-btn active" data-tab="dashboard" data-i18n="dashboard">📊 Панель</button>
+            <button class="admin-tab-btn" data-tab="materials" data-i18n="materials">📚 Материалы</button>
+            <button class="admin-tab-btn" data-tab="philosophy" data-i18n="philosophy">🎯 Философия</button>
+            <button class="admin-tab-btn" data-tab="contacts" data-i18n="contacts">📞 Контакты</button>
+            <button class="admin-tab-btn" data-tab="users" data-i18n="users">👥 Пользователи</button>
+            <button class="admin-tab-btn" data-tab="reports" data-i18n="reports">📈 Отчеты</button>
+            <button class="admin-tab-btn" data-tab="moderation" data-i18n="moderation">🛡️ Модерация</button>
+            <button class="admin-tab-btn" data-tab="settings" data-i18n="settings">⚙️ Настройки</button>
+        </div>
+
+        <div id="adminContent" class="admin-content"></div>
+    </div>
+</div>
+
+<!-- Contact Modal -->
+<div id="contactModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 data-i18n="contact_us">Связаться с нами</h2>
+        <div id="contactInfo" class="contact-info"></div>
+    </div>
+</div>
