@@ -3,12 +3,14 @@ let map;
 let markers = {};
 let currentUser = null;
 let allMarkers = [];
+let adminData = null;
 
 // Загрузка данных из localStorage
 function loadFromStorage() {
     const users = JSON.parse(localStorage.getItem('users')) || {};
     const currentUserEmail = localStorage.getItem('currentUser');
     allMarkers = JSON.parse(localStorage.getItem('markers')) || [];
+    adminData = JSON.parse(localStorage.getItem('adminData')) || {};
     
     if (currentUserEmail && users[currentUserEmail]) {
         currentUser = { email: currentUserEmail, ...users[currentUserEmail] };
@@ -26,55 +28,73 @@ function saveToStorage() {
         localStorage.setItem('users', JSON.stringify(users));
     }
     localStorage.setItem('markers', JSON.stringify(allMarkers));
+    localStorage.setItem('adminData', JSON.stringify(adminData));
 }
 
-// Обновление интерфейса в зависимости от состояния авторизации
+// Обновление UI в зависимости от авторизации
 function updateAuthUI() {
     const loginBtn = document.getElementById('loginBtn');
     const registerBtn = document.getElementById('registerBtn');
     const profileBtn = document.getElementById('profileBtn');
+    const adminBtn = document.getElementById('adminBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const addMarkerBtn = document.getElementById('addMarkerBtn');
     
     if (currentUser) {
         loginBtn.style.display = 'none';
         registerBtn.style.display = 'none';
-        profileBtn.style.display = 'block';
-        logoutBtn.style.display = 'block';
+        profileBtn.style.display = 'flex';
+        logoutBtn.style.display = 'flex';
         addMarkerBtn.style.display = 'block';
+        
+        if (currentUser.isAdmin) {
+            adminBtn.style.display = 'flex';
+        }
     } else {
-        loginBtn.style.display = 'block';
-        registerBtn.style.display = 'block';
+        loginBtn.style.display = 'flex';
+        registerBtn.style.display = 'flex';
         profileBtn.style.display = 'none';
         logoutBtn.style.display = 'none';
         addMarkerBtn.style.display = 'none';
+        adminBtn.style.display = 'none';
     }
 }
 
 // Инициализация карты
 function initMap() {
-    map = L.map('map').setView([55.7558, 37.6173], 12); // Москва по умолчанию
+    map = L.map('map').setView([55.7558, 37.6173], 12);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
     
-    loadFromStorage();
     renderMarkers();
 }
 
-// Рендеринг всех отметок на карте
+function showMap() {
+    document.getElementById('welcomeSection').style.display = 'none';
+    document.getElementById('map').style.display = 'block';
+    document.querySelector('.sidebar').classList.add('active');
+    
+    if (!map) {
+        setTimeout(() => {
+            initMap();
+            map.invalidateSize();
+        }, 100);
+    } else {
+        map.invalidateSize();
+    }
+}
+
+// Рендеринг маркеров на карте
 function renderMarkers() {
-    // Очистка старых маркеров
     Object.values(markers).forEach(marker => marker.remove());
     markers = {};
     
-    // Получение активных фильтров
     const filters = Array.from(document.querySelectorAll('.filter-item input[type="checkbox"]:checked'))
         .map(el => el.value);
     
-    // Добавление маркеров на карту
     allMarkers.forEach((markerData, index) => {
         if (!filters.includes(markerData.type)) return;
         
@@ -92,7 +112,7 @@ function renderMarkers() {
     updateMarkersList();
 }
 
-// Получение иконки для маркера
+// Получить иконку маркера
 function getMarkerIcon(type) {
     const iconUrls = {
         'help-offer': '🟢',
@@ -109,12 +129,12 @@ function getMarkerIcon(type) {
     });
 }
 
-// Создание содержимого popup'а
+// Создать контент popup
 function createPopupContent(markerData, index) {
     const typeLabels = {
-        'help-offer': 'Предлагаю помощь',
-        'help-need': 'Ищу помощь',
-        'initiative': 'Инициатива'
+        'help-offer': '🟢 Предлагаю помощь',
+        'help-need': '🟠 Ищу помощь',
+        'initiative': '🔵 Инициатива'
     };
     
     let content = `
@@ -149,7 +169,7 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Обновление списка отметок в боковой панели
+// Обновление списка отметок
 function updateMarkersList() {
     const markersList = document.getElementById('markersList');
     markersList.innerHTML = '';
@@ -158,9 +178,9 @@ function updateMarkersList() {
         .map(el => el.value);
     
     const typeLabels = {
-        'help-offer': 'Предлагаю помощь',
-        'help-need': 'Ищу помощь',
-        'initiative': 'Инициатива'
+        'help-offer': '🟢 Предлагаю помощь',
+        'help-need': '🟠 Ищу помощь',
+        'initiative': '🔵 Инициатива'
     };
     
     allMarkers.forEach((markerData, index) => {
@@ -182,7 +202,7 @@ function updateMarkersList() {
     });
 }
 
-// Показ деталей отметки
+// Показать детали отметки
 function showMarkerDetail(markerData, index) {
     if (typeof markerData === 'number') {
         markerData = allMarkers[markerData];
@@ -217,7 +237,7 @@ function showMarkerDetail(markerData, index) {
     modal.classList.add('show');
 }
 
-// Удаление отметки
+// Удалить отметку
 function deleteMarker(index) {
     if (confirm('Вы уверены, что хотите удалить эту отметку?')) {
         allMarkers.splice(index, 1);
@@ -237,7 +257,7 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('show');
 }
 
-// Обработчики событий модальных окон
+// Обработчики модальных окон
 function setupModalHandlers() {
     const modals = document.querySelectorAll('.modal');
     
@@ -260,12 +280,19 @@ function handleRegister(e) {
     e.preventDefault();
     
     const form = e.target;
-    const inputs = form.querySelectorAll('input, textarea');
-    const name = inputs[0].value.trim();
-    const email = inputs[1].value.trim();
-    const password = inputs[2].value;
-    const passwordConfirm = inputs[3].value;
-    const bio = inputs[4].value.trim();
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+    const bio = document.getElementById('regBio').value.trim();
+    const privacyCheck = document.getElementById('privacyCheck').checked;
+    const termsCheck = document.getElementById('termsCheck').checked;
+    const dataCheck = document.getElementById('dataCheck').checked;
+    
+    if (!privacyCheck || !termsCheck || !dataCheck) {
+        showMessage('Пожалуйста, согласитесь со всеми условиями', 'error');
+        return;
+    }
     
     if (password !== passwordConfirm) {
         showMessage('Пароли не совпадают', 'error');
@@ -273,9 +300,12 @@ function handleRegister(e) {
     }
     
     if (password.length < 6) {
-        showMessage('Пароль должен быть не менее 6 символов', 'error');
+        showMessage('Пароль ��олжен быть не менее 6 символов', 'error');
         return;
     }
+    
+    // Хеширование пароля (простой пример - в реальном приложении используйте bcrypt на сервере)
+    const hashedPassword = btoa(password);
     
     const users = JSON.parse(localStorage.getItem('users')) || {};
     
@@ -286,13 +316,18 @@ function handleRegister(e) {
     
     users[email] = {
         name,
-        password,
+        password: hashedPassword,
         bio,
-        createdAt: new Date().toISOString()
+        avatar: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2245%22 fill=%22%23667eea%22/%3E%3Ctext x=%2250%22 y=%2265%22 font-size=%2750%27 fill=%27white%27 text-anchor=%27middle%27%3E👤%3C/text%3E%3C/svg%3E',
+        documents: [],
+        createdAt: new Date().toISOString(),
+        agreedToPrivacy: true,
+        agreedToTerms: true,
+        agreedToDataProcessing: true
     };
     
     localStorage.setItem('users', JSON.stringify(users));
-    currentUser = { email, name, password, bio, createdAt: new Date().toISOString() };
+    currentUser = { email, ...users[email] };
     localStorage.setItem('currentUser', email);
     
     closeModal('registerModal');
@@ -306,13 +341,13 @@ function handleLogin(e) {
     e.preventDefault();
     
     const form = e.target;
-    const inputs = form.querySelectorAll('input');
-    const email = inputs[0].value.trim();
-    const password = inputs[1].value;
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const hashedPassword = btoa(password);
     
     const users = JSON.parse(localStorage.getItem('users')) || {};
     
-    if (!users[email] || users[email].password !== password) {
+    if (!users[email] || users[email].password !== hashedPassword) {
         showMessage('Неверный email или пароль', 'error');
         return;
     }
@@ -342,9 +377,14 @@ function handleAddMarker(e) {
     const location = document.getElementById('markerLocation').value.trim();
     const contact = document.getElementById('markerContact').value.trim();
     
-    // Для простоты используем координаты Москвы + небольшой сдвиг
-    const lat = 55.7558 + (Math.random() - 0.5) * 0.2;
-    const lng = 37.6173 + (Math.random() - 0.5) * 0.2;
+    const geoInfo = document.querySelector('.geo-info');
+    let lat = 55.7558 + (Math.random() - 0.5) * 0.2;
+    let lng = 37.6173 + (Math.random() - 0.5) * 0.2;
+    
+    if (geoInfo.dataset.lat && geoInfo.dataset.lng) {
+        lat = parseFloat(geoInfo.dataset.lat);
+        lng = parseFloat(geoInfo.dataset.lng);
+    }
     
     const markerData = {
         type: markerType,
@@ -364,18 +404,65 @@ function handleAddMarker(e) {
     
     closeModal('markerModal');
     form.reset();
-    renderMarkers();
+    document.querySelector('.geo-info').innerHTML = '';
     showMessage('Отметка успешно добавлена!', 'success');
+    
+    if (map) {
+        renderMarkers();
+    }
 }
 
-// Показ профиля
+// Геолокация
+document.addEventListener('DOMContentLoaded', () => {
+    const useGeoBtn = document.getElementById('useGeoBtn');
+    const geoInfo = document.querySelector('.geo-info');
+    
+    if (useGeoBtn) {
+        useGeoBtn.addEventListener('click', () => {
+            if ('geolocation' in navigator) {
+                useGeoBtn.disabled = true;
+                useGeoBtn.textContent = 'Получение координат...';
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        geoInfo.dataset.lat = lat;
+                        geoInfo.dataset.lng = lng;
+                        geoInfo.innerHTML = `✅ Координаты получены: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        useGeoBtn.disabled = false;
+                        useGeoBtn.innerHTML = '<i class="fas fa-check"></i> Геолокация установлена';
+                        useGeoBtn.style.background = '#10b981';
+                    },
+                    (error) => {
+                        showMessage('Ошибка получения координат: ' + error.message, 'error');
+                        useGeoBtn.disabled = false;
+                        useGeoBtn.textContent = 'Использовать мою геолокацию';
+                    }
+                );
+            } else {
+                showMessage('Геолокация не поддерживается вашим браузером', 'error');
+            }
+        });
+    }
+});
+
+// Показать профиль
 function showProfile() {
     if (!currentUser) return;
     
     const userMarkers = allMarkers.filter(m => m.authorEmail === currentUser.email);
     
-    const content = `
+    const infoTab = `
         <div class="profile-info">
+            <div class="avatar-section">
+                <img src="${currentUser.avatar}" alt="Avatar" class="avatar-image">
+                <div class="avatar-upload">
+                    <label for="avatarInput">📷 Изменить аватар</label>
+                    <input type="file" id="avatarInput" accept="image/*">
+                </div>
+            </div>
             <h3>Личная информация</h3>
             <div class="profile-field">
                 <div class="profile-field-label">Имя:</div>
@@ -398,7 +485,7 @@ function showProfile() {
         </div>
         
         <div class="profile-info">
-            <h3>Ваши отметки на карте (${userMarkers.length})</h3>
+            <h3>Мои отметки (${userMarkers.length})</h3>
             ${userMarkers.length > 0 ? `
                 <ul style="list-style: none;">
                     ${userMarkers.map((marker, idx) => `
@@ -412,12 +499,24 @@ function showProfile() {
                 <p style="color: #999;">Вы еще не создали отметок на карте</p>
             `}
         </div>
-        
-        <button class="btn-submit" onclick="editProfile()" style="margin-top: 1rem;">Редактировать профиль</button>
     `;
     
-    document.getElementById('profileContent').innerHTML = content;
+    document.getElementById('profileContent').innerHTML = infoTab;
     openModal('profileModal');
+    
+    document.getElementById('avatarInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentUser.avatar = event.target.result;
+                saveToStorage();
+                showMessage('Аватар обновлен', 'success');
+                showProfile();
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 }
 
 // Выход
@@ -430,7 +529,7 @@ function handleLogout() {
     }
 }
 
-// Показ сообщения
+// Показать сообщение
 function showMessage(text, type = 'info') {
     const message = document.createElement('div');
     message.className = `message ${type}`;
@@ -442,27 +541,136 @@ function showMessage(text, type = 'info') {
     }, 3000);
 }
 
+// AI Chat
+class AIChat {
+    constructor() {
+        this.isOpen = false;
+        this.messages = [];
+    }
+    
+    init() {
+        const chatToggle = document.getElementById('chatToggle');
+        const chatWidget = document.getElementById('chatWidget');
+        const chatSend = document.getElementById('chatSend');
+        const chatInput = document.getElementById('chatInput');
+        const chatMinimize = document.querySelector('.chat-minimize');
+        
+        chatToggle.addEventListener('click', () => this.toggle());
+        chatSend.addEventListener('click', () => this.sendMessage());
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.sendMessage();
+        });
+        chatMinimize.addEventListener('click', () => this.toggle());
+    }
+    
+    toggle() {
+        this.isOpen = !this.isOpen;
+        const widget = document.getElementById('chatWidget');
+        if (this.isOpen) {
+            widget.classList.add('show');
+        } else {
+            widget.classList.remove('show');
+        }
+    }
+    
+    sendMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        this.addMessage(text, 'user');
+        input.value = '';
+        
+        // Имитация ответа AI
+        setTimeout(() => {
+            const responses = [
+                'Спасибо за вопрос! Это интересно. Могу ли я помочь вам чем-то еще?',
+                'Я здесь, чтобы помочь. Расскажите подробнее о том, что вы ищете.',
+                'Отличный вопрос! На нашей платформе вы можете найти людей, готовых помочь.',
+                'Мне нравится ваша инициатива! Давайте создадим отметку на карте.',
+                'Присоединяйтесь к нашему сообществу и помогайте друг другу!'
+            ];
+            
+            const response = responses[Math.floor(Math.random() * responses.length)];
+            this.addMessage(response, 'ai');
+        }, 500);
+    }
+    
+    addMessage(text, sender) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${sender}`;
+        messageDiv.innerHTML = `<div class="chat-bubble">${escapeHtml(text)}</div>`;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+}
+
+const aiChat = new AIChat();
+
 // Инициализация при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
-    initMap();
+    loadFromStorage();
     setupModalHandlers();
+    aiChat.init();
     
-    // Обработчики кнопок навигации
+    // Кнопки навигации
     document.getElementById('registerBtn').onclick = () => openModal('registerModal');
     document.getElementById('loginBtn').onclick = () => openModal('loginModal');
     document.getElementById('profileBtn').onclick = () => showProfile();
     document.getElementById('logoutBtn').onclick = () => handleLogout();
     document.getElementById('addMarkerBtn').onclick = () => openModal('markerModal');
+    document.getElementById('startBtn').onclick = () => showMap();
+    document.getElementById('learnBtn').onclick = () => openModal('privacyModal');
     
-    // Обработчики форм
+    // Формы
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('markerForm').addEventListener('submit', handleAddMarker);
     
-    // Обработчики фильтров
+    // Фильтры
     document.querySelectorAll('.filter-item input[type="checkbox"]').forEach(checkbox => {
-        checkbox.addEventListener('change', renderMarkers);
+        checkbox.addEventListener('change', () => {
+            if (map) renderMarkers();
+        });
     });
+    
+    // Политика конфиденциальности
+    document.getElementById('privacyLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal('privacyModal');
+    });
+    
+    // Загрузить политику конфиденциальности
+    const privacyContent = `
+        <h3>1. Введение</h3>
+        <p>Платформа "Жить Заново" посвящена защите вашей приватности. Эта политика объясняет, как мы собираем и используем данные.</p>
+        
+        <h3>2. Сбор данных</h3>
+        <p>Мы собираем только информацию, которая необходима для:</p>
+        <ul>
+            <li>Создания и управления вашей учетной записью</li>
+            <li>Отображения ваших отметок на карте</li>
+            <li>Улучшения нашего сервиса</li>
+        </ul>
+        
+        <h3>3. Использование данных</h3>
+        <p>Ваши данные используются только для предоставления услуг платформы и никогда не передаются третьим лицам без вашего согласия.</p>
+        
+        <h3>4. Безопасность</h3>
+        <p>Мы используем современные методы защиты для обеспечения безопасности ваших данных. Все данные хранятся на зашифрованных серверах.</p>
+        
+        <h3>5. Права пользователя</h3>
+        <p>Вы имеете право:</p>
+        <ul>
+            <li>Получить копию своих данных</li>
+            <li>Запросить удаление своих данных</li>
+            <li>Возразить против обработки данных</li>
+        </ul>
+    `;
+    
+    document.getElementById('privacyContent').innerHTML = privacyContent;
     
     updateAuthUI();
 });

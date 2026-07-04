@@ -3,20 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Карта Взаимопомощи - Помогаем друг другу</title>
+    <title>Жить Заново - Карта Взаимопомощи</title>
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23667eea'/><circle cx='50' cy='50' r='40' fill='%23764ba2'/><text x='50' y='65' font-size='50' fill='white' text-anchor='middle' font-weight='bold'>🤝</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="logo">🤝 Карта Взаимопомощи</div>
+            <div class="logo">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='none' stroke='%23fff' stroke-width='8'/%3E%3Cpath d='M50 140 L100 80 L150 140' fill='none' stroke='%23fff' stroke-width='4'/%3E%3Ccircle cx='80' cy='100' r='8' fill='%2310b981'/%3E%3Ccircle cx='120' cy='100' r='8' fill='%23f59e0b'/%3E%3C/svg%3E" alt="Logo" class="logo-img">
+                <span>Жить Заново</span>
+            </div>
+            <div class="nav-center">
+                <div class="language-selector">
+                    <button class="lang-btn" data-lang="ru" title="Русский">🇷🇺</button>
+                    <button class="lang-btn" data-lang="en" title="English">🇺🇸</button>
+                    <button class="lang-btn" data-lang="de" title="Deutsch">🇩🇪</button>
+                    <button class="lang-btn" data-lang="es" title="Español">🇪🇸</button>
+                </div>
+            </div>
             <div class="nav-buttons">
-                <button id="loginBtn" class="nav-btn">Вход</button>
-                <button id="registerBtn" class="nav-btn primary">Регистрация</button>
-                <button id="profileBtn" class="nav-btn primary" style="display: none;">Профиль</button>
-                <button id="logoutBtn" class="nav-btn" style="display: none;">Выход</button>
+                <button id="loginBtn" class="nav-btn"><i class="fas fa-sign-in-alt"></i> <span data-i18n="login">Вход</span></button>
+                <button id="registerBtn" class="nav-btn primary"><i class="fas fa-user-plus"></i> <span data-i18n="register">Регистрация</span></button>
+                <button id="profileBtn" class="nav-btn primary" style="display: none;"><i class="fas fa-user-circle"></i> <span data-i18n="profile">Профиль</span></button>
+                <button id="adminBtn" class="nav-btn" style="display: none;"><i class="fas fa-cog"></i> <span data-i18n="admin">Админ</span></button>
+                <button id="logoutBtn" class="nav-btn" style="display: none;"><i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Выход</span></button>
             </div>
         </div>
     </nav>
@@ -24,61 +37,114 @@
     <div class="container">
         <aside class="sidebar">
             <div class="filter-section">
-                <h3>Фильтры</h3>
+                <h3 data-i18n="filters">Фильтры</h3>
                 <label class="filter-item">
-                    <input type="checkbox" value="help-offer" checked> 
-                    Предлагаю помощь
+                    <input type="checkbox" value="help-offer" checked>
+                    <span data-i18n="offer_help">Предлагаю помощь</span>
                 </label>
                 <label class="filter-item">
-                    <input type="checkbox" value="help-need" checked> 
-                    Ищу помощь
+                    <input type="checkbox" value="help-need" checked>
+                    <span data-i18n="need_help">Ищу помощь</span>
                 </label>
                 <label class="filter-item">
-                    <input type="checkbox" value="initiative" checked> 
-                    Инициативы
+                    <input type="checkbox" value="initiative" checked>
+                    <span data-i18n="initiative">Инициативы</span>
                 </label>
             </div>
 
             <button id="addMarkerBtn" class="add-marker-btn" style="display: none;">
-                + Добавить отметку
+                + <span data-i18n="add_marker">Добавить отметку</span>
             </button>
 
             <div class="markers-list">
-                <h3>Отметки на карте</h3>
+                <h3 data-i18n="markers_on_map">Отметки на карте</h3>
                 <div id="markersList"></div>
             </div>
         </aside>
 
         <main class="main-content">
-            <div id="map" class="map-container"></div>
+            <div id="welcomeSection" class="welcome-section">
+                <div class="welcome-content">
+                    <div class="welcome-text">
+                        <h1 data-i18n="welcome_title">Добро пожаловать на платформу "Жить Заново"</h1>
+                        <p data-i18n="welcome_desc">Мы создали это сообщество для людей, которые верят в силу взаимопомощи и готовы делиться своими навыками и временем. На нашей платформе каждый может:</p>
+                        <ul>
+                            <li><strong data-i18n="welcome_offer">Предложить свою помощь</strong> - поделитесь своими умениями и услугами</li>
+                            <li><strong data-i18n="welcome_seek">Найти нужную помощь</strong> - получите поддержку в нужный момент</li>
+                            <li><strong data-i18n="welcome_join">Присоединиться к инициативам</strong> - станьте частью сообщества</li>
+                        </ul>
+                        <p data-i18n="welcome_mission"><em>Наша миссия:</em> создавать мощные сообщества, где люди поддерживают друг друга, где доверие и взаимность - основа отношений. Мы верим, что каждый человек имеет что-то ценное для предложения.</p>
+                        
+                        <div class="cta-buttons">
+                            <button id="startBtn" class="btn-cta"><i class="fas fa-map"></i> <span data-i18n="explore_map">Изучить карту</span></button>
+                            <button id="learnBtn" class="btn-cta secondary"><i class="fas fa-book"></i> <span data-i18n="learn_more">Узнать больше</span></button>
+                        </div>
+                    </div>
+                    <div class="welcome-info">
+                        <div class="info-card">
+                            <i class="fas fa-users"></i>
+                            <h4 data-i18n="community">Сообщество</h4>
+                            <p data-i18n="community_desc">Присоединитесь к растущему числу помощников</p>
+                        </div>
+                        <div class="info-card">
+                            <i class="fas fa-shield-alt"></i>
+                            <h4 data-i18n="safe">Безопасно</h4>
+                            <p data-i18n="safe_desc">Проверенные пользователи и защита данных</p>
+                        </div>
+                        <div class="info-card">
+                            <i class="fas fa-globe"></i>
+                            <h4 data-i18n="accessible">Доступно</h4>
+                            <p data-i18n="accessible_desc">Многоязычная платформа для всех</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="map" class="map-container" style="display: none;"></div>
         </main>
     </div>
 
-    <!-- Модальное окно регистрации -->
+    <!-- Модальные окна регистрации и входа -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Регистрация</h2>
+            <h2 data-i18n="register">Регистрация</h2>
             <form id="registerForm">
-                <input type="text" placeholder="Ваше имя" required>
-                <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Пароль" required>
-                <input type="password" placeholder="Подтвердите пароль" required>
-                <textarea placeholder="О вас (опционально)"></textarea>
-                <button type="submit" class="btn-submit">Зарегистрироваться</button>
+                <input type="text" id="regName" placeholder="" data-i18n-placeholder="your_name" required>
+                <input type="email" id="regEmail" placeholder="" data-i18n-placeholder="email" required>
+                <input type="password" id="regPassword" placeholder="" data-i18n-placeholder="password" required>
+                <input type="password" id="regPasswordConfirm" placeholder="" data-i18n-placeholder="confirm_password" required>
+                <textarea id="regBio" placeholder="" data-i18n-placeholder="about_optional"></textarea>
+                
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="privacyCheck" required>
+                        <span data-i18n="accept_privacy">Я согласен(а) с политикой конфиденциальности</span>
+                        <a href="#" id="privacyLink" data-i18n="privacy_link">Прочитать</a>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="termsCheck" required>
+                        <span data-i18n="accept_terms">Я согласен(а) с условиями использования</span>
+                        <a href="#" id="termsLink" data-i18n="terms_link">Прочитать</a>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="dataCheck" required>
+                        <span data-i18n="accept_data">Я согласен(а) на обработку моих личных данных</span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-submit" data-i18n="register">Зарегистрироваться</button>
             </form>
         </div>
     </div>
 
-    <!-- Модальное окно входа -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Вход</h2>
+            <h2 data-i18n="login">Вход</h2>
             <form id="loginForm">
-                <input type="email" placeholder="Email" required>
-                <input type="password" placeholder="Пароль" required>
-                <button type="submit" class="btn-submit">Войти</button>
+                <input type="email" id="loginEmail" placeholder="" data-i18n-placeholder="email" required>
+                <input type="password" id="loginPassword" placeholder="" data-i18n-placeholder="password" required>
+                <button type="submit" class="btn-submit" data-i18n="login">Войти</button>
             </form>
         </div>
     </div>
@@ -87,27 +153,32 @@
     <div id="markerModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Добавить отметку на карту</h2>
+            <h2 data-i18n="add_marker">Добавить отметку на карту</h2>
             <form id="markerForm">
                 <label>
                     <input type="radio" name="markerType" value="help-offer" checked>
-                    Я предлагаю помощь
+                    <span data-i18n="offer_help">Я предлагаю помощь</span>
                 </label>
                 <label>
                     <input type="radio" name="markerType" value="help-need">
-                    Мне нужна помощь
+                    <span data-i18n="need_help">Мне нужна помощь</span>
                 </label>
                 <label>
                     <input type="radio" name="markerType" value="initiative">
-                    Я предлагаю инициативу
+                    <span data-i18n="share_initiative">Я предлагаю инициативу</span>
                 </label>
 
-                <input type="text" id="markerTitle" placeholder="Краткое описание" required>
-                <textarea id="markerDescription" placeholder="Подробное описание (что именно вы предлагаете/ищите)" required></textarea>
-                <input type="text" id="markerLocation" placeholder="Адрес или название места" required>
-                <input type="text" id="markerContact" placeholder="Как с вами связаться (опционально)">
+                <input type="text" id="markerTitle" placeholder="" data-i18n-placeholder="title" required>
+                <textarea id="markerDescription" placeholder="" data-i18n-placeholder="description" required></textarea>
+                <input type="text" id="markerLocation" placeholder="" data-i18n-placeholder="location" required>
+                <input type="text" id="markerContact" placeholder="" data-i18n-placeholder="contact_info_optional">
+                
+                <div class="geo-options">
+                    <button type="button" id="useGeoBtn" class="btn-geo"><i class="fas fa-location-arrow"></i> <span data-i18n="use_my_location">Использовать мою геолокацию</span></button>
+                    <div id="geoInfo" class="geo-info"></div>
+                </div>
 
-                <button type="submit" class="btn-submit">Добавить отметку</button>
+                <button type="submit" class="btn-submit" data-i18n="add_marker">Добавить отметку</button>
             </form>
         </div>
     </div>
@@ -116,12 +187,42 @@
     <div id="profileModal" class="modal">
         <div class="modal-content modal-large">
             <span class="close">&times;</span>
-            <h2>Мой профиль</h2>
+            <h2 data-i18n="profile">Мой профиль</h2>
+            <div class="profile-tabs">
+                <button class="profile-tab-btn active" data-tab="info" data-i18n="info">Информация</button>
+                <button class="profile-tab-btn" data-tab="markers" data-i18n="my_markers">Мои отметки</button>
+                <button class="profile-tab-btn" data-tab="documents" data-i18n="documents">Документы</button>
+                <button class="profile-tab-btn" data-tab="settings" data-i18n="settings">Настройки</button>
+            </div>
             <div id="profileContent"></div>
         </div>
     </div>
 
-    <!-- Модальное окно просмотра отметки -->
+    <!-- Модальное окно администратора -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close">&times;</span>
+            <h2 data-i18n="admin_panel">Админ-панель</h2>
+            <div class="admin-tabs">
+                <button class="admin-tab-btn active" data-tab="materials" data-i18n="materials">Материалы</button>
+                <button class="admin-tab-btn" data-tab="philosophy" data-i18n="philosophy">Философия</button>
+                <button class="admin-tab-btn" data-tab="contacts" data-i18n="contacts">Контакты</button>
+                <button class="admin-tab-btn" data-tab="users" data-i18n="users">Пользователи</button>
+            </div>
+            <div id="adminContent"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно политики конфиденциальности -->
+    <div id="privacyModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close">&times;</span>
+            <h2 data-i18n="privacy_policy">Политика конфиденциальности</h2>
+            <div id="privacyContent" class="legal-content"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно деталей отметки -->
     <div id="markerDetailModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -129,8 +230,22 @@
         </div>
     </div>
 
+    <!-- AI Chat Widget -->
+    <div id="chatWidget" class="chat-widget">
+        <div class="chat-header">
+            <h4 data-i18n="ai_assistant">AI Помощник</h4>
+            <button class="chat-minimize"><i class="fas fa-minus"></i></button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-group">
+            <input type="text" id="chatInput" placeholder="" data-i18n-placeholder="ask_ai" />
+            <button id="chatSend"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+    <button id="chatToggle" class="chat-toggle" title="" data-i18n-title="ai_assistant"><i class="fas fa-comment-dots"></i></button>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="languages.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
