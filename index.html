@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта Взаимопомощи - Помогаем друг другу</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="logo">🤝 Карта Взаимопомощи</div>
+            <div class="nav-buttons">
+                <button id="loginBtn" class="nav-btn">Вход</button>
+                <button id="registerBtn" class="nav-btn primary">Регистрация</button>
+                <button id="profileBtn" class="nav-btn primary" style="display: none;">Профиль</button>
+                <button id="logoutBtn" class="nav-btn" style="display: none;">Выход</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="filter-section">
+                <h3>Фильтры</h3>
+                <label class="filter-item">
+                    <input type="checkbox" value="help-offer" checked> 
+                    Предлагаю помощь
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="help-need" checked> 
+                    Ищу помощь
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="initiative" checked> 
+                    Инициативы
+                </label>
+            </div>
+
+            <button id="addMarkerBtn" class="add-marker-btn" style="display: none;">
+                + Добавить отметку
+            </button>
+
+            <div class="markers-list">
+                <h3>Отметки на карте</h3>
+                <div id="markersList"></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="map" class="map-container"></div>
+        </main>
+    </div>
+
+    <!-- Модальное окно регистрации -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Регистрация</h2>
+            <form id="registerForm">
+                <input type="text" placeholder="Ваше имя" required>
+                <input type="email" placeholder="Email" required>
+                <input type="password" placeholder="Пароль" required>
+                <input type="password" placeholder="Подтвердите пароль" required>
+                <textarea placeholder="О вас (опционально)"></textarea>
+                <button type="submit" class="btn-submit">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно входа -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Вход</h2>
+            <form id="loginForm">
+                <input type="email" placeholder="Email" required>
+                <input type="password" placeholder="Пароль" required>
+                <button type="submit" class="btn-submit">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления отметки -->
+    <div id="markerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Добавить отметку на карту</h2>
+            <form id="markerForm">
+                <label>
+                    <input type="radio" name="markerType" value="help-offer" checked>
+                    Я предлагаю помощь
+                </label>
+                <label>
+                    <input type="radio" name="markerType" value="help-need">
+                    Мне нужна помощь
+                </label>
+                <label>
+                    <input type="radio" name="markerType" value="initiative">
+                    Я предлагаю инициативу
+                </label>
+
+                <input type="text" id="markerTitle" placeholder="Краткое описание" required>
+                <textarea id="markerDescription" placeholder="Подробное описание (что именно вы предлагаете/ищите)" required></textarea>
+                <input type="text" id="markerLocation" placeholder="Адрес или название места" required>
+                <input type="text" id="markerContact" placeholder="Как с вами связаться (опционально)">
+
+                <button type="submit" class="btn-submit">Добавить отметку</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно профиля -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close">&times;</span>
+            <h2>Мой профиль</h2>
+            <div id="profileContent"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно просмотра отметки -->
+    <div id="markerDetailModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="markerDetailContent"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
