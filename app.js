@@ -628,13 +628,33 @@ function generateResetToken() {
 }
 
 /**
- * Хэширует токен для хранения в localStorage (btoa совпадает с подходом
- * хранения паролей в данном проекте).
+ * Хэширует токен через SHA-256 для безопасного хранения в localStorage.
  * @param {string} token
- * @returns {string}
+ * @returns {Promise<string>} Hex-строка SHA-256 хэша
  */
-function hashToken(token) {
-    return btoa(token);
+async function hashToken(token) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(token);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Сравнивает две строки за постоянное время для защиты от timing-атак.
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+function timingSafeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const la = a.length;
+    const lb = b.length;
+    let result = la ^ lb;
+    const len = Math.max(la, lb);
+    for (let i = 0; i < len; i++) {
+        result |= (a.charCodeAt(i % la) || 0) ^ (b.charCodeAt(i % lb) || 0);
+    }
+    return result === 0;
 }
 
 /**
@@ -660,7 +680,7 @@ function checkResetRateLimit(email) {
  * @param {string} email
  * @param {string} tokenHash
  */
-function saveResetToken(email, tokenHash) {
+async function saveResetToken(email, tokenHash) {
     const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
     store[email] = {
         tokenHash,
@@ -674,16 +694,16 @@ function saveResetToken(email, tokenHash) {
  * Проверяет токен сброса пароля.
  * @param {string} email
  * @param {string} rawToken — сырой токен из URL
- * @returns {'ok'|'invalid'|'expired'|'used'}
+ * @returns {Promise<'ok'|'invalid'|'expired'|'used'>}
  */
-function validateResetToken(email, rawToken) {
+async function validateResetToken(email, rawToken) {
     const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
     const entry = store[email];
     if (!entry) return 'invalid';
     if (entry.used) return 'used';
     if (new Date() > new Date(entry.expiresAt)) return 'expired';
-    // Безопасное сравнение через сравнение хэшей
-    if (entry.tokenHash !== hashToken(rawToken)) return 'invalid';
+    const candidateHash = await hashToken(rawToken);
+    if (!timingSafeEqual(entry.tokenHash, candidateHash)) return 'invalid';
     return 'ok';
 }
 
@@ -716,7 +736,7 @@ function buildResetUrl(rawToken, email) {
  * Ответ нейтральный — не раскрывает, существует ли пользователь.
  * @param {Event} e
  */
-function handleForgotPassword(e) {
+async function handleForgotPassword(e) {
     e.preventDefault();
     const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
     const form = document.getElementById('forgotPasswordForm');
@@ -732,8 +752,8 @@ function handleForgotPassword(e) {
 
     if (userExists) {
         const rawToken = generateResetToken();
-        const tokenHash = hashToken(rawToken);
-        saveResetToken(email, tokenHash);
+        const tokenHash = await hashToken(rawToken);
+        await saveResetToken(email, tokenHash);
 
         const resetUrl = buildResetUrl(rawToken, email);
 
@@ -781,7 +801,7 @@ function openResetPasswordModal(rawToken, email) {
  * Обрабатывает форму «Сброс пароля».
  * @param {Event} e
  */
-function handleResetPassword(e) {
+async function handleResetPassword(e) {
     e.preventDefault();
     const rawToken = document.getElementById('resetToken').value;
     const email = document.getElementById('resetEmail').value.trim().toLowerCase();
@@ -800,7 +820,7 @@ function handleResetPassword(e) {
         return;
     }
 
-    const status = validateResetToken(email, rawToken);
+    const status = await validateResetToken(email, rawToken);
     if (status === 'expired') {
         showMessage(langManager.t('token_expired'), 'error');
         return;
@@ -848,7 +868,7 @@ function handleResetPassword(e) {
  * Проверяет хэш URL при загрузке страницы и открывает модал сброса,
  * если найдены параметры token и email.
  */
-function checkResetPasswordUrl() {
+async function checkResetPasswordUrl() {
     const hash = window.location.hash;
     if (!hash.startsWith('#reset-password?')) return;
 
@@ -862,7 +882,7 @@ function checkResetPasswordUrl() {
     // Убираем токен из адресной строки (безопасность)
     history.replaceState(null, '', window.location.pathname + window.location.search);
 
-    const status = validateResetToken(email.toLowerCase(), rawToken);
+    const status = await validateResetToken(email.toLowerCase(), rawToken);
     if (status === 'expired') {
         showMessage(langManager.t('token_expired'), 'error');
         return;
