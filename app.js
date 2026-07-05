@@ -678,10 +678,11 @@ function checkResetRateLimit(email) {
  * Сохраняет хэш токена для email с временем истечения.
  * Старый токен перезаписывается (инвалидация).
  * @param {string} email
- * @param {string} tokenHash
+ * @param {string} tokenHash SHA-256 хэш токена (не сырой токен)
  */
 async function saveResetToken(email, tokenHash) {
     const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
+    // Сохраняем только SHA-256 хэш; сырой токен в localStorage никогда не попадает.
     store[email] = {
         tokenHash,
         expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString(),
@@ -715,6 +716,7 @@ function consumeResetToken(email) {
     const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
     if (store[email]) {
         store[email].used = true;
+        // Обновляем только флаг used; сырой токен в store никогда не хранится.
         localStorage.setItem('passwordResetTokens', JSON.stringify(store));
     }
 }
@@ -760,13 +762,18 @@ async function handleForgotPassword(e) {
         // Показываем нейтральное сообщение + ссылку (симуляция письма в demo-режиме)
         form.style.display = 'none';
         resultDiv.style.display = 'block';
+        const anchorEl = document.createElement('a');
+        anchorEl.className = 'reset-demo-link';
+        anchorEl.id = 'resetDemoLink';
+        anchorEl.href = resetUrl;
+        anchorEl.textContent = resetUrl;
         resultDiv.innerHTML = `
             <p class="reset-success-text">${escapeHtml(langManager.t('reset_email_sent'))}</p>
             <div class="reset-demo-box">
                 <p class="reset-demo-note"><i class="fas fa-info-circle"></i> ${escapeHtml(langManager.t('reset_link_demo_note'))}</p>
-                <a href="${escapeHtml(resetUrl)}" class="reset-demo-link" id="resetDemoLink">${escapeHtml(resetUrl)}</a>
             </div>
         `;
+        resultDiv.querySelector('.reset-demo-box').appendChild(anchorEl);
 
         // Клик по ссылке открывает модал сброса без перезагрузки
         document.getElementById('resetDemoLink').addEventListener('click', (ev) => {
