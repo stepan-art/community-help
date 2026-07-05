@@ -609,6 +609,303 @@ class AIChat {
 
 const aiChat = new AIChat();
 
+// ============================================================
+// Восстановление пароля (Forgot / Reset Password Flow)
+// ============================================================
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 60 минут
+const RESET_RATE_LIMIT = 3;                  // Максимум запросов в час
+const RESET_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * Генерирует криптографически стойкий случайный токен.
+ * @returns {string} Hex-строка токена (32 байта = 64 символа)
+ */
+function generateResetToken() {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Хэширует токен через SHA-256 для безопасного хранения в localStorage.
+ * @param {string} token
+ * @returns {Promise<string>} Hex-строка SHA-256 хэша
+ */
+async function hashToken(token) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(token);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Сравнивает две строки за постоянное время для защиты от timing-атак.
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+function timingSafeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const la = a.length;
+    const lb = b.length;
+    let result = la ^ lb;
+    const len = Math.max(la, lb);
+    for (let i = 0; i < len; i++) {
+        result |= (a.charCodeAt(i % la) || 0) ^ (b.charCodeAt(i % lb) || 0);
+    }
+    return result === 0;
+}
+
+/**
+ * Проверяет, не превышен ли лимит запросов для данного email.
+ * Записи хранятся в localStorage['resetRateLimit'].
+ * @param {string} email
+ * @returns {boolean} true — лимит НЕ превышен
+ */
+function checkResetRateLimit(email) {
+    const store = JSON.parse(localStorage.getItem('resetRateLimit')) || {};
+    const now = Date.now();
+    const attempts = (store[email] || []).filter(ts => now - ts < RESET_RATE_WINDOW_MS);
+    if (attempts.length >= RESET_RATE_LIMIT) return false;
+    attempts.push(now);
+    store[email] = attempts;
+    localStorage.setItem('resetRateLimit', JSON.stringify(store));
+    return true;
+}
+
+/**
+ * Сохраняет хэш токена для email с временем истечения.
+ * Старый токен перезаписывается (инвалидация).
+ * @param {string} email
+ * @param {string} tokenHash SHA-256 хэш токена (не сырой токен)
+ */
+async function saveResetToken(email, tokenHash) {
+    const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
+    // Сохраняем только SHA-256 хэш; сырой токен в localStorage никогда не попадает.
+    store[email] = {
+        tokenHash,
+        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS).toISOString(),
+        used: false
+    };
+    localStorage.setItem('passwordResetTokens', JSON.stringify(store));
+}
+
+/**
+ * Проверяет токен сброса пароля.
+ * @param {string} email
+ * @param {string} rawToken — сырой токен из URL
+ * @returns {Promise<'ok'|'invalid'|'expired'|'used'>}
+ */
+async function validateResetToken(email, rawToken) {
+    const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
+    const entry = store[email];
+    if (!entry) return 'invalid';
+    if (entry.used) return 'used';
+    if (new Date() > new Date(entry.expiresAt)) return 'expired';
+    const candidateHash = await hashToken(rawToken);
+    if (!timingSafeEqual(entry.tokenHash, candidateHash)) return 'invalid';
+    return 'ok';
+}
+
+/**
+ * Помечает токен как использованный (инвалидация после сброса).
+ * @param {string} email
+ */
+function consumeResetToken(email) {
+    const store = JSON.parse(localStorage.getItem('passwordResetTokens')) || {};
+    if (store[email]) {
+        store[email].used = true;
+        // Обновляем только флаг used; сырой токен в store никогда не хранится.
+        localStorage.setItem('passwordResetTokens', JSON.stringify(store));
+    }
+}
+
+/**
+ * Строит полный URL ссылки для сброса пароля.
+ * @param {string} rawToken
+ * @param {string} email
+ * @returns {string}
+ */
+function buildResetUrl(rawToken, email) {
+    const base = window.location.href.split('#')[0];
+    const params = new URLSearchParams({ token: rawToken, email });
+    return `${base}#reset-password?${params.toString()}`;
+}
+
+/**
+ * Обрабатывает форму «Забыли пароль?».
+ * Ответ нейтральный — не раскрывает, существует ли пользователь.
+ * @param {Event} e
+ */
+async function handleForgotPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+    const form = document.getElementById('forgotPasswordForm');
+    const resultDiv = document.getElementById('forgotPasswordResult');
+
+    if (!checkResetRateLimit(email)) {
+        showMessage(langManager.t('rate_limit_exceeded'), 'error');
+        return;
+    }
+
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    const userExists = Boolean(users[email]);
+
+    if (userExists) {
+        const rawToken = generateResetToken();
+        const tokenHash = await hashToken(rawToken);
+        await saveResetToken(email, tokenHash);
+
+        const resetUrl = buildResetUrl(rawToken, email);
+
+        // Показываем нейтральное сообщение + ссылку (симуляция письма в demo-режиме)
+        form.style.display = 'none';
+        resultDiv.style.display = 'block';
+        const anchorEl = document.createElement('a');
+        anchorEl.className = 'reset-demo-link';
+        anchorEl.id = 'resetDemoLink';
+        anchorEl.href = resetUrl;
+        anchorEl.textContent = resetUrl;
+        resultDiv.innerHTML = `
+            <p class="reset-success-text">${escapeHtml(langManager.t('reset_email_sent'))}</p>
+            <div class="reset-demo-box">
+                <p class="reset-demo-note"><i class="fas fa-info-circle"></i> ${escapeHtml(langManager.t('reset_link_demo_note'))}</p>
+            </div>
+        `;
+        resultDiv.querySelector('.reset-demo-box').appendChild(anchorEl);
+
+        // Клик по ссылке открывает модал сброса без перезагрузки
+        document.getElementById('resetDemoLink').addEventListener('click', (ev) => {
+            ev.preventDefault();
+            closeModal('forgotPasswordModal');
+            openResetPasswordModal(rawToken, email);
+        });
+    } else {
+        // Нейтральный ответ — не раскрываем, что email не найден
+        form.style.display = 'none';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<p class="reset-success-text">${escapeHtml(langManager.t('reset_email_sent'))}</p>`;
+    }
+}
+
+/**
+ * Открывает модал сброса пароля с предзаполненными данными.
+ * @param {string} rawToken
+ * @param {string} email
+ */
+function openResetPasswordModal(rawToken, email) {
+    document.getElementById('resetToken').value = rawToken;
+    document.getElementById('resetEmail').value = email;
+    document.getElementById('resetPasswordForm').style.display = 'block';
+    document.getElementById('resetPasswordResult').style.display = 'none';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newPasswordConfirm').value = '';
+    openModal('resetPasswordModal');
+}
+
+/**
+ * Обрабатывает форму «Сброс пароля».
+ * @param {Event} e
+ */
+async function handleResetPassword(e) {
+    e.preventDefault();
+    const rawToken = document.getElementById('resetToken').value;
+    const email = document.getElementById('resetEmail').value.trim().toLowerCase();
+    const newPassword = document.getElementById('newPassword').value;
+    const newPasswordConfirm = document.getElementById('newPasswordConfirm').value;
+    const form = document.getElementById('resetPasswordForm');
+    const resultDiv = document.getElementById('resetPasswordResult');
+
+    if (newPassword.length < 6) {
+        showMessage(langManager.t('reset_password_min_length'), 'error');
+        return;
+    }
+
+    if (newPassword !== newPasswordConfirm) {
+        showMessage(langManager.t('reset_passwords_mismatch'), 'error');
+        return;
+    }
+
+    const status = await validateResetToken(email, rawToken);
+    if (status === 'expired') {
+        showMessage(langManager.t('token_expired'), 'error');
+        return;
+    }
+    if (status === 'used') {
+        showMessage(langManager.t('token_used'), 'error');
+        return;
+    }
+    if (status !== 'ok') {
+        showMessage(langManager.t('token_invalid'), 'error');
+        return;
+    }
+
+    // Обновляем пароль
+    const users = JSON.parse(localStorage.getItem('users')) || {};
+    if (users[email]) {
+        users[email].password = btoa(newPassword);
+        localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    // Инвалидируем токен
+    consumeResetToken(email);
+
+    // Завершаем активную сессию при смене пароля
+    if (currentUser && currentUser.email === email) {
+        currentUser = null;
+        localStorage.removeItem('currentUser');
+        updateAuthUI();
+    }
+
+    // Показываем успешный результат
+    form.style.display = 'none';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+        <p class="reset-success-text">${escapeHtml(langManager.t('reset_success'))}</p>
+        <button class="btn-submit" id="goToLoginBtn" style="margin-top:1rem;">${escapeHtml(langManager.t('back_to_login'))}</button>
+    `;
+    document.getElementById('goToLoginBtn').addEventListener('click', () => {
+        closeModal('resetPasswordModal');
+        openModal('loginModal');
+    });
+}
+
+/**
+ * Проверяет хэш URL при загрузке страницы и открывает модал сброса,
+ * если найдены параметры token и email.
+ */
+async function checkResetPasswordUrl() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#reset-password?')) return;
+
+    const queryStr = hash.slice('#reset-password?'.length);
+    const params = new URLSearchParams(queryStr);
+    const rawToken = params.get('token');
+    const email = params.get('email');
+
+    if (!rawToken || !email) return;
+
+    // Убираем токен из адресной строки (безопасность)
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    const status = await validateResetToken(email.toLowerCase(), rawToken);
+    if (status === 'expired') {
+        showMessage(langManager.t('token_expired'), 'error');
+        return;
+    }
+    if (status === 'used') {
+        showMessage(langManager.t('token_used'), 'error');
+        return;
+    }
+    if (status !== 'ok') {
+        showMessage(langManager.t('token_invalid'), 'error');
+        return;
+    }
+
+    openResetPasswordModal(rawToken, email.toLowerCase());
+}
+
 // Инициализация при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
     loadFromStorage();
@@ -628,6 +925,19 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('markerForm').addEventListener('submit', handleAddMarker);
+    document.getElementById('forgotPasswordForm').addEventListener('submit', handleForgotPassword);
+    document.getElementById('resetPasswordForm').addEventListener('submit', handleResetPassword);
+
+    // Ссылка «Забыли пароль?» в форме входа
+    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        // Сброс модала перед открытием
+        document.getElementById('forgotPasswordForm').style.display = 'block';
+        document.getElementById('forgotPasswordResult').style.display = 'none';
+        document.getElementById('forgotEmail').value = '';
+        closeModal('loginModal');
+        openModal('forgotPasswordModal');
+    });
     
     // Фильтры
     document.querySelectorAll('.filter-item input[type="checkbox"]').forEach(checkbox => {
@@ -673,4 +983,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('privacyContent').innerHTML = privacyContent;
     
     updateAuthUI();
+
+    // Проверить URL на наличие токена сброса пароля
+    checkResetPasswordUrl();
 });

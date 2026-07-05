@@ -144,6 +144,9 @@
             <form id="loginForm">
                 <input type="email" id="loginEmail" placeholder="" data-i18n-placeholder="email" required>
                 <input type="password" id="loginPassword" placeholder="" data-i18n-placeholder="password" required>
+                <div class="forgot-password-link">
+                    <a href="#" id="forgotPasswordLink" data-i18n="forgot_password">Забыли пароль?</a>
+                </div>
                 <button type="submit" class="btn-submit" data-i18n="login">Войти</button>
             </form>
         </div>
@@ -243,6 +246,36 @@
         </div>
     </div>
     <button id="chatToggle" class="chat-toggle" title="" data-i18n-title="ai_assistant"><i class="fas fa-comment-dots"></i></button>
+
+    <!-- Модальное окно восстановления пароля -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 data-i18n="forgot_password_title">Восстановление пароля</h2>
+            <p class="modal-desc" data-i18n="forgot_password_desc">Введите адрес электронной почты, указанный при регистрации.</p>
+            <form id="forgotPasswordForm">
+                <input type="email" id="forgotEmail" placeholder="" data-i18n-placeholder="email" required>
+                <button type="submit" class="btn-submit" data-i18n="send_reset_link">Отправить ссылку</button>
+            </form>
+            <div id="forgotPasswordResult" class="reset-result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно сброса пароля -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 data-i18n="reset_password_title">Сброс пароля</h2>
+            <form id="resetPasswordForm">
+                <input type="hidden" id="resetToken">
+                <input type="hidden" id="resetEmail">
+                <input type="password" id="newPassword" placeholder="" data-i18n-placeholder="new_password" required>
+                <input type="password" id="newPasswordConfirm" placeholder="" data-i18n-placeholder="confirm_new_password" required>
+                <button type="submit" class="btn-submit" data-i18n="reset_password_btn">Сбросить пароль</button>
+            </form>
+            <div id="resetPasswordResult" class="reset-result" style="display:none;"></div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="languages.js"></script>
